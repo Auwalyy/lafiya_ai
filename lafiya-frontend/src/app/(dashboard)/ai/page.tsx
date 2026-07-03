@@ -115,7 +115,7 @@ export default function AIPage() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">AI Health Assistant</h1>
-          <p className="text-sm text-slate-500">Powered by GPT-4o-mini · Available 24/7</p>
+          <p className="text-sm text-slate-500">Powered by Gemini · Available 24/7</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex rounded-xl border overflow-hidden">

@@ -1,16 +1,16 @@
 "use client";
-import { Bell, Search, Sun, Moon, Menu, Heart } from "lucide-react";
+import { Bell, Search, Sun, Moon, Heart } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard, Bot, Users, Calendar, FileText,
-  Pill, Baby, Stethoscope, AlertTriangle,
-} from "lucide-react";
+import { LayoutDashboard, Bot, Users, Calendar, AlertTriangle } from "lucide-react";
+import { notifications as notifApi } from "@/lib/api";
+import type { Notification } from "@/lib/api";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 const mobileNav = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Home" },
@@ -22,8 +22,26 @@ const mobileNav = [
 
 export function Topbar() {
   const { theme, toggle } = useTheme();
+  const { user } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
+  const [notifList, setNotifList] = useState<Notification[]>([]);
   const pathname = usePathname();
+
+  useEffect(() => {
+    if (!user) return;
+    notifApi.list()
+      .then((r) => setNotifList(r.data.slice(0, 5)))
+      .catch(() => {});
+  }, [user]);
+
+  const unreadCount = notifList.filter((n) => !n.isRead).length;
+
+  const markAllRead = async () => {
+    try {
+      await notifApi.readAll();
+      setNotifList((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch {}
+  };
 
   return (
     <>
@@ -55,21 +73,29 @@ export function Topbar() {
           <div className="relative">
             <Button variant="ghost" size="icon" onClick={() => setNotifOpen(!notifOpen)} aria-label="Notifications">
               <Bell className="h-4 w-4" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-bold">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </Button>
             {notifOpen && (
-              <div className="absolute right-0 top-12 w-80 rounded-2xl border bg-[var(--card)] shadow-xl p-4 animate-fade-in">
-                <p className="font-semibold text-sm mb-3">Notifications</p>
-                {[
-                  { title: "Dr. Musa confirmed your appointment", time: "2m ago", color: "bg-emerald-500" },
-                  { title: "New post in Diabetes Community", time: "15m ago", color: "bg-blue-500" },
-                  { title: "Medication reminder: Metformin", time: "1h ago", color: "bg-orange-500" },
-                ].map((n, i) => (
-                  <div key={i} className="flex gap-3 py-2.5 border-b last:border-0">
-                    <div className={`h-2 w-2 rounded-full mt-1.5 shrink-0 ${n.color}`} />
-                    <div>
+              <div className="absolute right-0 top-12 w-80 rounded-2xl border bg-[var(--card)] shadow-xl p-4 animate-fade-in z-50">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-semibold text-sm">Notifications</p>
+                  {unreadCount > 0 && (
+                    <button onClick={markAllRead} className="text-xs text-emerald-600 hover:underline">Mark all read</button>
+                  )}
+                </div>
+                {notifList.length === 0 ? (
+                  <p className="text-xs text-slate-400 text-center py-4">No notifications</p>
+                ) : notifList.map((n) => (
+                  <div key={n._id} className={cn("flex gap-3 py-2.5 border-b last:border-0", !n.isRead && "bg-emerald-50/50 dark:bg-emerald-950/10 -mx-1 px-1 rounded")}>
+                    <div className={`h-2 w-2 rounded-full mt-1.5 shrink-0 ${n.isRead ? "bg-slate-300" : "bg-emerald-500"}`} />
+                    <div className="flex-1">
                       <p className="text-xs text-slate-700 dark:text-slate-300">{n.title}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{n.time}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{n.message}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{new Date(n.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
                 ))}
@@ -77,7 +103,7 @@ export function Topbar() {
             )}
           </div>
 
-          <Avatar name="Amina Bello" size="sm" online className="cursor-pointer" />
+          <Avatar name={user ? `${user.firstName} ${user.lastName}` : "User"} size="sm" online className="cursor-pointer" />
         </div>
       </header>
 

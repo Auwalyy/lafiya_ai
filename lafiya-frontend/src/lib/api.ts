@@ -1,6 +1,6 @@
 // Central API client — maps every backend endpoint
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://lafiya-ai-backend.onrender.com/api";
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;

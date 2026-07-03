@@ -15,29 +15,54 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  const DEFAULT_TIMEOUT = 15000; // 15s
+  const controller = new AbortController();
+  const signal = controller.signal;
+  const timeout = (options as any).timeout ?? DEFAULT_TIMEOUT;
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-  if (res.status === 401) {
-    const refreshed = await tryRefresh();
-    if (refreshed) {
-      headers["Authorization"] = `Bearer ${getToken()}`;
-      const retry = await fetch(`${BASE_URL}${path}`, { ...options, headers });
-      if (!retry.ok) throw new ApiError(retry.status, await retry.json());
-      return retry.json();
+  try {
+    const res = await fetch(`${BASE_URL}${path}`, { ...options, headers, signal });
+    clearTimeout(timeoutId);
+
+    if (res.status === 401) {
+      const refreshed = await tryRefresh();
+      if (refreshed) {
+        headers["Authorization"] = `Bearer ${getToken()}`;
+        const retry = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+        if (!retry.ok) throw new ApiError(retry.status, await retry.json().catch(() => ({ message: retry.statusText })));
+        return retry.json();
+      }
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        window.location.href = "/login";
+      }
+      throw new ApiError(401, { message: "Unauthorized" });
     }
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    window.location.href = "/login";
-    throw new ApiError(401, { message: "Unauthorized" });
-  }
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({ message: res.statusText }));
-    throw new ApiError(res.status, body);
-  }
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ message: res.statusText }));
+      throw new ApiError(res.status, body);
+    }
 
-  if (res.status === 204) return undefined as T;
-  return res.json();
+    if (res.status === 204) return undefined as T;
+    return res.json();
+  } catch (err: unknown) {
+    clearTimeout(timeoutId);
+    const e = err as any;
+    // Log details to help debugging in browser console
+    try {
+      // eslint-disable-next-line no-console
+      console.error("API request failed", { url: `${BASE_URL}${path}`, options, error: e });
+    } catch {}
+
+    if (e && e.name === "AbortError") {
+      throw new ApiError(408, { message: "Request timed out. Please try again.", details: e?.message });
+    }
+    // Network-level errors (DNS, offline, CORS failures etc.) — include original message
+    throw new ApiError(0, { message: (e && e.message) || "Network error. Please check your connection.", details: e });
+  }
 }
 
 async function tryRefresh(): Promise<boolean> {

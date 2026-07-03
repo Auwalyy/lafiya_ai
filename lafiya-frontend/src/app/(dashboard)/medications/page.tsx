@@ -48,7 +48,7 @@ export default function MedicationsPage() {
     const key = `${medId}-${doseTime}`;
     setLogLoading(key);
     try {
-      await medsApi.logDose(medId, { status: taken ? "missed" : "taken", time: doseTime });
+      await medsApi.logDose(medId, { scheduledAt: new Date().toISOString(), status: taken ? "missed" : "taken" });
       setTodayMeds((prev) => prev.map((m) => {
         if (m._id !== medId) return m;
         return {
@@ -69,7 +69,7 @@ export default function MedicationsPage() {
       await medsApi.create({
         ...addForm,
         times: addForm.times.split(",").map((t) => t.trim()),
-        stock: addForm.stock ? Number(addForm.stock) : undefined,
+        pillsRemaining: addForm.stock ? Number(addForm.stock) : undefined,
       });
       setShowAdd(false);
       setAddForm({ name: "", dosage: "", frequency: "Once daily", times: "8:00 AM", condition: "", startDate: new Date().toISOString().split("T")[0], stock: "" });
@@ -137,10 +137,10 @@ export default function MedicationsPage() {
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Frequency</label>
                   <select value={addForm.frequency} onChange={(e) => setAddForm((p) => ({ ...p, frequency: e.target.value }))}
                     className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                    <option>Once daily</option>
-                    <option>Twice daily</option>
-                    <option>Three times daily</option>
-                    <option>As needed</option>
+                    <option value="once_daily">Once daily</option>
+                    <option value="twice_daily">Twice daily</option>
+                    <option value="thrice_daily">Three times daily</option>
+                    <option value="as_needed">As needed</option>
                   </select>
                 </div>
                 <div>
@@ -195,7 +195,7 @@ export default function MedicationsPage() {
               { label: "Today's Doses", value: `${takenCount}/${totalDoses}`, icon: Pill, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
               { label: "Avg Adherence", value: `${avgAdherence}%`, icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-950/30" },
               { label: "Active Meds", value: allMeds.filter((m) => m.isActive).length.toString(), icon: CheckCircle2, color: "text-purple-500", bg: "bg-purple-50 dark:bg-purple-950/30" },
-              { label: "Next Refill", value: allMeds.find((m) => m.refillDate) ? new Date(allMeds.find((m) => m.refillDate)!.refillDate!).toLocaleDateString("en-NG", { month: "short", day: "numeric" }) : "—", icon: Calendar, color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-950/30" },
+              { label: "Next Refill", value: "—", icon: Calendar, color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-950/30" },
             ].map((s) => (
               <Card key={s.label}>
                 <CardContent className="p-4">
@@ -235,12 +235,11 @@ export default function MedicationsPage() {
                               <h3 className="font-bold text-slate-900 dark:text-white">
                                 {med.name} <span className="font-normal text-slate-500">{med.dosage}</span>
                               </h3>
-                              <p className="text-sm text-slate-500">{med.frequency}{med.condition ? ` · ${med.condition}` : ""}</p>
+                              <p className="text-sm text-slate-500">{med.frequency}</p>
                             </div>
                             <div className="flex items-center gap-2">
                               <div className="text-right">
-                                {med.stock !== undefined && <p className="text-xs text-slate-400">Stock: {med.stock} pills</p>}
-                                {med.refillDate && <p className="text-xs text-orange-500">Refill: {new Date(med.refillDate).toLocaleDateString("en-NG", { month: "short", day: "numeric" })}</p>}
+                                {med.pillsRemaining !== undefined && <p className="text-xs text-slate-400">Stock: {med.pillsRemaining} pills</p>}
                               </div>
                               <button onClick={() => handleDelete(med._id)} className="p-1 text-slate-300 hover:text-red-500 transition-colors">
                                 <Trash2 className="h-4 w-4" />

@@ -30,7 +30,6 @@ export default function ProfilePage() {
 
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", phone: "",
-    bloodType: "", height: "", weight: "",
   });
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -51,9 +50,6 @@ export default function ProfilePage() {
         lastName: user.lastName ?? "",
         email: user.email ?? "",
         phone: user.phone ?? "",
-        bloodType: user.bloodType ?? "",
-        height: user.height?.toString() ?? "",
-        weight: user.weight?.toString() ?? "",
       });
     }
   }, [user]);
@@ -68,9 +64,6 @@ export default function ProfilePage() {
         firstName: form.firstName,
         lastName: form.lastName,
         phone: form.phone,
-        bloodType: form.bloodType || undefined,
-        height: form.height ? Number(form.height) : undefined,
-        weight: form.weight ? Number(form.weight) : undefined,
       });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
@@ -90,7 +83,7 @@ export default function ProfilePage() {
     } catch {} finally { setAvatarLoading(false); }
   };
 
-  const completionFields = [form.firstName, form.lastName, form.email, form.phone, form.bloodType, form.height, form.weight];
+  const completionFields = [form.firstName, form.lastName, form.email, form.phone];
   const completion = Math.round((completionFields.filter(Boolean).length / completionFields.length) * 100);
 
   return (
@@ -122,7 +115,7 @@ export default function ProfilePage() {
                 <Badge variant="default">{user?.role ?? "patient"}</Badge>
               </div>
               <p className="text-slate-500 text-sm mt-1">{user?.email}{user?.phone ? ` · ${user.phone}` : ""}</p>
-              {user?.location && <p className="text-slate-500 text-sm">{user.location}</p>}
+              {user?.location?.state && <p className="text-slate-500 text-sm">{user.location.state}</p>}
               <div className="mt-4">
                 <p className="text-xs text-slate-500 mb-1.5">Profile completion</p>
                 <Progress value={completion} label="" color="emerald" size="sm" />
@@ -166,27 +159,16 @@ export default function ProfilePage() {
       </Card>
 
       {/* Health info */}
-      <Card>
-        <CardContent className="p-6">
-          <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Health Information</h3>
-          <div className="grid sm:grid-cols-3 gap-4">
-            <Input label="Blood type" value={form.bloodType} onChange={(e) => setForm((p) => ({ ...p, bloodType: e.target.value }))} placeholder="e.g. O+" />
-            <Input label="Height (cm)" type="number" value={form.height} onChange={(e) => setForm((p) => ({ ...p, height: e.target.value }))} />
-            <Input label="Weight (kg)" type="number" value={form.weight} onChange={(e) => setForm((p) => ({ ...p, weight: e.target.value }))} />
-          </div>
-          {(user?.conditions ?? []).length > 0 && (
-            <div className="mt-4">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Conditions</p>
-              <div className="flex gap-2 flex-wrap">
-                {(user?.conditions ?? []).map((c) => <Badge key={c} variant="default" size="md">{c}</Badge>)}
-              </div>
+      {(user?.healthConditions ?? []).length > 0 && (
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Health Conditions</h3>
+            <div className="flex gap-2 flex-wrap">
+              {(user?.healthConditions ?? []).map((c) => <Badge key={c} variant="default" size="md">{c}</Badge>)}
             </div>
-          )}
-          <Button size="md" className="mt-4" onClick={handleSave} disabled={saveLoading}>
-            {saveLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Health Info"}
-          </Button>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Settings toggles */}
       {settingsSections.map((section) => (

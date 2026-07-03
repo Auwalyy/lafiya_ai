@@ -20,7 +20,7 @@ export default function PregnancyPage() {
 
   // Start tracker modal
   const [showStart, setShowStart] = useState(false);
-  const [startForm, setStartForm] = useState({ lmpDate: "", dueDate: "" });
+  const [startForm, setStartForm] = useState({ lastMenstrualPeriod: "", doctorId: "", isHighRisk: false });
   const [startLoading, setStartLoading] = useState(false);
   const [startError, setStartError] = useState("");
 
@@ -31,7 +31,7 @@ export default function PregnancyPage() {
 
   // Log visit modal
   const [showVisit, setShowVisit] = useState(false);
-  const [visitForm, setVisitForm] = useState({ date: "", doctor: "", weight: "", bp: "", notes: "" });
+  const [visitForm, setVisitForm] = useState({ date: "", weight: "", systolic: "", diastolic: "", fetalHeartRate: "", notes: "" });
   const [visitLoading, setVisitLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -56,7 +56,7 @@ export default function PregnancyPage() {
     setStartLoading(true);
     setStartError("");
     try {
-      await pregnancyApi.start(startForm);
+      await pregnancyApi.start({ lastMenstrualPeriod: startForm.lastMenstrualPeriod, isHighRisk: startForm.isHighRisk });
       setShowStart(false);
       await fetchData();
     } catch (e: unknown) {
@@ -83,13 +83,13 @@ export default function PregnancyPage() {
     try {
       await pregnancyApi.logAntenatalVisit(data._id, {
         date: visitForm.date,
-        doctor: visitForm.doctor || undefined,
         weight: visitForm.weight ? Number(visitForm.weight) : undefined,
-        bp: visitForm.bp || undefined,
+        bloodPressure: visitForm.systolic ? { systolic: Number(visitForm.systolic), diastolic: Number(visitForm.diastolic) } : undefined,
+        fetalHeartRate: visitForm.fetalHeartRate ? Number(visitForm.fetalHeartRate) : undefined,
         notes: visitForm.notes || undefined,
       });
       setShowVisit(false);
-      setVisitForm({ date: "", doctor: "", weight: "", bp: "", notes: "" });
+      setVisitForm({ date: "", weight: "", systolic: "", diastolic: "", fetalHeartRate: "", notes: "" });
       await fetchData();
     } catch {} finally { setVisitLoading(false); }
   };
@@ -136,15 +136,18 @@ export default function PregnancyPage() {
                 <form onSubmit={handleStart} className="space-y-3">
                   <div>
                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Last Menstrual Period (LMP)</label>
-                    <input type="date" required value={startForm.lmpDate}
-                      onChange={(e) => setStartForm((p) => ({ ...p, lmpDate: e.target.value }))}
+                    <input type="date" required value={startForm.lastMenstrualPeriod}
+                      onChange={(e) => setStartForm((p) => ({ ...p, lastMenstrualPeriod: e.target.value }))}
                       className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Due Date (optional)</label>
-                    <input type="date" value={startForm.dueDate}
-                      onChange={(e) => setStartForm((p) => ({ ...p, dueDate: e.target.value }))}
-                      className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">High Risk Pregnancy?</label>
+                    <select value={startForm.isHighRisk ? "yes" : "no"}
+                      onChange={(e) => setStartForm((p) => ({ ...p, isHighRisk: e.target.value === "yes" }))}
+                      className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                      <option value="no">No</option>
+                      <option value="yes">Yes</option>
+                    </select>
                   </div>
                   <div className="flex gap-3 pt-2">
                     <Button type="submit" className="flex-1" disabled={startLoading}>
@@ -245,9 +248,21 @@ export default function PregnancyPage() {
                       className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">BP</label>
-                    <input value={visitForm.bp} placeholder="120/80"
-                      onChange={(e) => setVisitForm((p) => ({ ...p, bp: e.target.value }))}
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Fetal HR (bpm)</label>
+                    <input type="number" value={visitForm.fetalHeartRate}
+                      onChange={(e) => setVisitForm((p) => ({ ...p, fetalHeartRate: e.target.value }))}
+                      className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Systolic (mmHg)</label>
+                    <input type="number" value={visitForm.systolic} placeholder="120"
+                      onChange={(e) => setVisitForm((p) => ({ ...p, systolic: e.target.value }))}
+                      className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Diastolic (mmHg)</label>
+                    <input type="number" value={visitForm.diastolic} placeholder="80"
+                      onChange={(e) => setVisitForm((p) => ({ ...p, diastolic: e.target.value }))}
                       className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                   </div>
                 </div>
@@ -398,7 +413,7 @@ export default function PregnancyPage() {
                         </p>
                         {v.weight && <Badge variant="slate" size="sm">{v.weight}kg</Badge>}
                       </div>
-                      {v.doctor && <p className="text-xs text-slate-500">{v.doctor}</p>}
+                      {v.doctorId && <p className="text-xs text-slate-500">{v.doctorId}</p>}
                       {v.notes && <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{v.notes}</p>}
                     </div>
                   ))}

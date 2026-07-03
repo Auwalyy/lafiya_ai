@@ -60,10 +60,10 @@ export default function AIPage() {
 
     try {
       const res = await ai.chat({ message: msg, sessionId, language });
-      if (!sessionId) setSessionId(res.data.sessionId);
+      if (!sessionId) setSessionId(res.sessionId);
       const aiMsg: Message = {
         id: (Date.now() + 1).toString(), role: "assistant",
-        content: res.data.message,
+        content: res.reply,
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
       setMessages((prev) => [...prev, aiMsg]);

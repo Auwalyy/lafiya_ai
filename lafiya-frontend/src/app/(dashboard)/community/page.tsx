@@ -34,7 +34,7 @@ export default function CommunityPage() {
 
   // New post modal
   const [showPost, setShowPost] = useState(false);
-  const [postForm, setPostForm] = useState({ content: "", community: "", tags: "" });
+  const [postForm, setPostForm] = useState({ content: "", communityId: "", tags: "", type: "text", language: "en" });
   const [postLoading, setPostLoading] = useState(false);
   const [postError, setPostError] = useState("");
 
@@ -95,12 +95,14 @@ export default function CommunityPage() {
     setPostError("");
     try {
       const form = new FormData();
+      form.append("communityId", postForm.communityId);
       form.append("content", postForm.content);
-      form.append("community", postForm.community);
+      form.append("type", postForm.type);
+      form.append("language", postForm.language);
       if (postForm.tags) form.append("tags", postForm.tags);
       await postsApi.create(form);
       setShowPost(false);
-      setPostForm({ content: "", community: "", tags: "" });
+      setPostForm({ content: "", communityId: "", tags: "", type: "text", language: "en" });
       await fetchData();
     } catch (e: unknown) {
       setPostError(e instanceof Error ? e.message : "Failed to create post");
@@ -141,8 +143,8 @@ export default function CommunityPage() {
               <form onSubmit={handlePost} className="space-y-3">
                 <div>
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Community</label>
-                  <select required value={postForm.community}
-                    onChange={(e) => setPostForm((p) => ({ ...p, community: e.target.value }))}
+                  <select required value={postForm.communityId}
+                    onChange={(e) => setPostForm((p) => ({ ...p, communityId: e.target.value }))}
                     className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                     <option value="">Select community</option>
                     {commList.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}

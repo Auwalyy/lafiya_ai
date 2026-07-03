@@ -7,6 +7,7 @@ import {
   LayoutDashboard, Bot, Users, Calendar, FileText,
   Pill, Baby, Stethoscope, AlertTriangle, Bell,
   Settings, LogOut, Heart, ChevronLeft, ChevronRight,
+  Building2, Megaphone, ShieldCheck,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -20,6 +21,8 @@ const navItems = [
   { href: "/pregnancy", icon: Baby, label: "Pregnancy" },
   { href: "/doctors", icon: Stethoscope, label: "Doctors" },
   { href: "/emergency", icon: AlertTriangle, label: "Emergency" },
+  { href: "/hospitals", icon: Building2, label: "Hospitals" },
+  { href: "/campaigns", icon: Megaphone, label: "Campaigns" },
 ];
 
 export function Sidebar() {
@@ -72,6 +75,16 @@ export function Sidebar() {
 
       {/* Bottom */}
       <div className="p-3 border-t space-y-1">
+        <Link
+          href="/admin"
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all",
+            collapsed && "justify-center px-2"
+          )}
+        >
+          <ShieldCheck className="h-5 w-5 shrink-0" />
+          {!collapsed && <span>Admin</span>}
+        </Link>
         <Link
           href="/notifications"
           className={cn(

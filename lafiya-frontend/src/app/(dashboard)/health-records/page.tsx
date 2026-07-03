@@ -234,7 +234,7 @@ export default function HealthRecordsPage() {
                       <Badge variant="slate" size="sm">{rec.type}</Badge>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
-                      {rec.doctor ? `Dr. ${rec.doctor}` : "Self-recorded"} · {new Date(rec.date).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}
+                      {rec.doctorId ? `Dr. ${rec.doctorId}` : "Self-recorded"} · {new Date(rec.date).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}
                     </p>
                   </div>
                   <div className="flex gap-1 shrink-0">

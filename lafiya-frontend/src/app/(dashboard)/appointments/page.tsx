@@ -16,7 +16,9 @@ const statusColors: Record<string, "default" | "amber" | "slate" | "red"> = {
   confirmed: "default", pending: "amber", completed: "slate", cancelled: "red",
 };
 
-const typeIcons = { video: Video, phone: Phone, "in-person": MapPin };
+const typeIcons: Record<string, React.ElementType> = {
+  in_person: MapPin, telemedicine_video: Video, telemedicine_audio: Phone,
+};
 
 export default function AppointmentsPage() {
   const { user } = useAuth();
@@ -26,10 +28,11 @@ export default function AppointmentsPage() {
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Book modal state
   const [showBook, setShowBook] = useState(false);
   const [doctorList, setDoctorList] = useState<Doctor[]>([]);
-  const [bookForm, setBookForm] = useState({ doctor: "", date: "", time: "", type: "video", notes: "" });
+  const [bookForm, setBookForm] = useState({
+    doctorId: "", scheduledAt: "", type: "in_person", reason: "", symptoms: "",
+  });
   const [bookLoading, setBookLoading] = useState(false);
   const [bookError, setBookError] = useState("");
 
@@ -37,14 +40,13 @@ export default function AppointmentsPage() {
     setLoading(true);
     setError("");
     try {
-      const isDoctor = user?.role === "doctor";
-      const res = isDoctor ? await aptApi.doctorAppointments() : await aptApi.mine();
+      const res = user?.role === "doctor"
+        ? await aptApi.doctorAppointments()
+        : await aptApi.mine();
       setAllApts(res.data);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load appointments");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }, [user]);
 
   useEffect(() => { fetchApts(); }, [fetchApts]);
@@ -57,17 +59,15 @@ export default function AppointmentsPage() {
 
   const handleCancel = async (id: string) => {
     setActionLoading(id);
-    try {
-      await aptApi.cancel(id);
-      await fetchApts();
-    } catch {} finally { setActionLoading(null); }
+    try { await aptApi.cancel(id); await fetchApts(); }
+    catch {} finally { setActionLoading(null); }
   };
 
   const openBook = async () => {
     setShowBook(true);
     setBookError("");
     if (doctorList.length === 0) {
-      const res = await doctorsApi.list().catch(() => ({ data: [] }));
+      const res = await doctorsApi.list().catch(() => ({ data: [] as Doctor[] }));
       setDoctorList(res.data);
     }
   };
@@ -77,9 +77,15 @@ export default function AppointmentsPage() {
     setBookLoading(true);
     setBookError("");
     try {
-      await aptApi.book(bookForm);
+      await aptApi.book({
+        doctorId: bookForm.doctorId,
+        scheduledAt: new Date(bookForm.scheduledAt).toISOString(),
+        type: bookForm.type,
+        reason: bookForm.reason,
+        symptoms: bookForm.symptoms ? bookForm.symptoms.split(",").map((s) => s.trim()) : [],
+      });
       setShowBook(false);
-      setBookForm({ doctor: "", date: "", time: "", type: "video", notes: "" });
+      setBookForm({ doctorId: "", scheduledAt: "", type: "in_person", reason: "", symptoms: "" });
       await fetchApts();
     } catch (e: unknown) {
       setBookError(e instanceof Error ? e.message : "Booking failed");
@@ -113,53 +119,49 @@ export default function AppointmentsPage() {
               <form onSubmit={handleBook} className="space-y-3">
                 <div>
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Doctor</label>
-                  <select
-                    required value={bookForm.doctor}
-                    onChange={(e) => setBookForm((p) => ({ ...p, doctor: e.target.value }))}
-                    className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
+                  <select required value={bookForm.doctorId}
+                    onChange={(e) => setBookForm((p) => ({ ...p, doctorId: e.target.value }))}
+                    className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                     <option value="">Select a doctor</option>
                     {doctorList.map((d) => (
                       <option key={d._id} value={d._id}>
-                        Dr. {d.user?.firstName} {d.user?.lastName} — {d.specialty}
+                        Dr. {d.user?.firstName} {d.user?.lastName} — {d.specialization}
                       </option>
                     ))}
                   </select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Date</label>
-                    <input type="date" required value={bookForm.date}
-                      onChange={(e) => setBookForm((p) => ({ ...p, date: e.target.value }))}
-                      min={new Date().toISOString().split("T")[0]}
-                      className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Time</label>
-                    <input type="time" required value={bookForm.time}
-                      onChange={(e) => setBookForm((p) => ({ ...p, time: e.target.value }))}
-                      className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
-                  </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Date & Time</label>
+                  <input type="datetime-local" required value={bookForm.scheduledAt}
+                    onChange={(e) => setBookForm((p) => ({ ...p, scheduledAt: e.target.value }))}
+                    min={new Date().toISOString().slice(0, 16)}
+                    className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Type</label>
                   <select value={bookForm.type}
                     onChange={(e) => setBookForm((p) => ({ ...p, type: e.target.value }))}
-                    className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="video">Video Call</option>
-                    <option value="phone">Phone Call</option>
-                    <option value="in-person">In Person</option>
+                    className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <option value="in_person">In Person</option>
+                    <option value="telemedicine_video">Video Call</option>
+                    <option value="telemedicine_audio">Phone Call</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Notes (optional)</label>
-                  <textarea value={bookForm.notes}
-                    onChange={(e) => setBookForm((p) => ({ ...p, notes: e.target.value }))}
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Reason</label>
+                  <textarea required value={bookForm.reason}
+                    onChange={(e) => setBookForm((p) => ({ ...p, reason: e.target.value }))}
                     rows={2} placeholder="Reason for visit..."
                     className="w-full rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Symptoms (comma separated)</label>
+                  <input value={bookForm.symptoms}
+                    onChange={(e) => setBookForm((p) => ({ ...p, symptoms: e.target.value }))}
+                    placeholder="e.g. headache, fever"
+                    className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
                 <div className="flex gap-3 pt-2">
@@ -213,11 +215,14 @@ export default function AppointmentsPage() {
       ) : (
         <div className="space-y-4">
           {filtered.map((apt) => {
-            const TypeIcon = typeIcons[apt.type as keyof typeof typeIcons] ?? MapPin;
+            const TypeIcon = typeIcons[apt.type] ?? MapPin;
             const doctorName = typeof apt.doctor === "object"
               ? `Dr. ${apt.doctor.user?.firstName ?? ""} ${apt.doctor.user?.lastName ?? ""}`
               : "Doctor";
-            const specialty = typeof apt.doctor === "object" ? apt.doctor.specialty : "";
+            const specialization = typeof apt.doctor === "object" ? apt.doctor.specialization : "";
+            const typeLabel: Record<string, string> = {
+              in_person: "In Person", telemedicine_video: "Video Call", telemedicine_audio: "Phone Call",
+            };
             return (
               <Card key={apt._id} hover className="overflow-hidden">
                 <CardContent className="p-5">
@@ -227,31 +232,32 @@ export default function AppointmentsPage() {
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <h3 className="font-bold text-slate-900 dark:text-white">{doctorName}</h3>
-                          {specialty && <p className="text-sm text-emerald-600">{specialty}</p>}
+                          {specialization && <p className="text-sm text-emerald-600">{specialization}</p>}
                         </div>
                         <Badge variant={statusColors[apt.status]}>{apt.status}</Badge>
                       </div>
                       <div className="flex flex-wrap gap-4 mt-3">
                         <div className="flex items-center gap-1.5 text-sm text-slate-500">
                           <Calendar className="h-4 w-4 text-slate-400" />
-                          {new Date(apt.date).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}
+                          {new Date(apt.scheduledAt).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}
                         </div>
                         <div className="flex items-center gap-1.5 text-sm text-slate-500">
-                          <Clock className="h-4 w-4 text-slate-400" /> {apt.time}
+                          <Clock className="h-4 w-4 text-slate-400" />
+                          {new Date(apt.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </div>
                         <div className="flex items-center gap-1.5 text-sm text-slate-500">
                           <TypeIcon className="h-4 w-4 text-slate-400" />
-                          {apt.type.charAt(0).toUpperCase() + apt.type.slice(1)}
+                          {typeLabel[apt.type] ?? apt.type}
                         </div>
                       </div>
-                      {apt.notes && (
+                      {apt.reason && (
                         <p className="text-xs text-slate-500 mt-2 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800">
-                          📝 {apt.notes}
+                          📝 {apt.reason}
                         </p>
                       )}
                       {(apt.status === "confirmed" || apt.status === "pending") && (
                         <div className="flex gap-2 mt-4">
-                          {apt.type === "video" && apt.status === "confirmed" && (
+                          {apt.type === "telemedicine_video" && apt.status === "confirmed" && (
                             <Button size="sm" className="gap-1.5"><Video className="h-3.5 w-3.5" /> Join Video Call</Button>
                           )}
                           <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600"
@@ -263,7 +269,9 @@ export default function AppointmentsPage() {
                       )}
                       {apt.status === "completed" && (
                         <div className="flex gap-2 mt-4">
-                          <Button variant="outline" size="sm">View Notes</Button>
+                          {apt.doctorNotes && (
+                            <Button variant="outline" size="sm">View Notes</Button>
+                          )}
                           <Button variant="muted" size="sm" onClick={openBook}>Book Again</Button>
                         </div>
                       )}

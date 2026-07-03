@@ -30,7 +30,7 @@ export function Topbar() {
   useEffect(() => {
     if (!user) return;
     notifApi.list()
-      .then((r) => setNotifList(r.data.slice(0, 5)))
+      .then((r) => setNotifList((r.notifications ?? []).slice(0, 5)))
       .catch(() => {});
   }, [user]);
 

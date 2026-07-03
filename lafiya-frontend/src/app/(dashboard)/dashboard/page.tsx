@@ -35,12 +35,12 @@ export default function DashboardPage() {
       appointments.mine().catch(() => ({ data: [] })),
       medications.today().catch(() => ({ data: [] })),
       posts.list("limit=3").catch(() => ({ data: [] })),
-      notifications.list().catch(() => ({ data: [] })),
+      notifications.list().catch(() => ({ notifications: [], unreadCount: 0 })),
     ]).then(([apts, meds, postsRes, notifs]) => {
       setUpcomingApts((apts.data as Appointment[]).filter((a) => a.status !== "cancelled" && a.status !== "completed").slice(0, 2));
       setTodayMeds((meds.data as TodayMedication[]).slice(0, 3));
       setFeed(postsRes.data as Post[]);
-      setUnread((notifs.data as Notification[]).filter((n) => !n.isRead).length);
+      setUnread((notifs as { notifications: Notification[]; unreadCount: number }).unreadCount ?? 0);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -117,7 +117,7 @@ export default function DashboardPage() {
                       </p>
                       <div className="flex items-center gap-2 mt-1.5">
                         <Clock className="h-3 w-3 text-slate-400" />
-                        <span className="text-xs text-slate-500">{new Date(apt.date).toLocaleDateString()} · {apt.time}</span>
+                        <span className="text-xs text-slate-500">{new Date(apt.scheduledAt).toLocaleDateString()}</span>
                       </div>
                     </div>
                     <Badge variant={apt.status === "confirmed" ? "default" : "amber"}>{apt.status}</Badge>

@@ -23,7 +23,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
-    firstName: "", lastName: "", email: "", phone: "", password: "",
+    firstName: "", lastName: "", email: "", phone: "", password: "", preferredLanguage: "en",
   });
 
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -34,7 +34,7 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
     try {
-      await register({ ...form, role: selectedRole });
+      await register({ ...form, role: selectedRole, preferredLanguage: form.preferredLanguage });
       router.push("/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Registration failed. Please try again.");

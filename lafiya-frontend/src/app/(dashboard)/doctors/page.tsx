@@ -20,7 +20,7 @@ export default function DoctorsPage() {
   const [search, setSearch] = useState("");
   const [specialty, setSpecialty] = useState("All");
   const [bookingId, setBookingId] = useState<string | null>(null);
-  const [bookForm, setBookForm] = useState({ date: "", time: "", type: "video", notes: "" });
+  const [bookForm, setBookForm] = useState({ scheduledAt: "", type: "in_person", reason: "", symptoms: "" });
   const [bookLoading, setBookLoading] = useState(false);
   const [bookError, setBookError] = useState("");
   const [bookSuccess, setBookSuccess] = useState("");
@@ -47,10 +47,16 @@ export default function DoctorsPage() {
     setBookLoading(true);
     setBookError("");
     try {
-      await aptApi.book({ doctor: bookingId, ...bookForm });
+      await aptApi.book({
+        doctorId: bookingId,
+        scheduledAt: new Date(bookForm.scheduledAt).toISOString(),
+        type: bookForm.type,
+        reason: bookForm.reason,
+        symptoms: bookForm.symptoms ? bookForm.symptoms.split(",").map((s) => s.trim()) : [],
+      });
       setBookSuccess("Appointment booked successfully!");
       setBookingId(null);
-      setBookForm({ date: "", time: "", type: "video", notes: "" });
+      setBookForm({ scheduledAt: "", type: "in_person", reason: "", symptoms: "" });
       setTimeout(() => setBookSuccess(""), 3000);
     } catch (e: unknown) {
       setBookError(e instanceof Error ? e.message : "Booking failed");
@@ -84,37 +90,28 @@ export default function DoctorsPage() {
                 </div>
               )}
               <form onSubmit={handleBook} className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Date</label>
-                    <input type="date" required value={bookForm.date}
-                      onChange={(e) => setBookForm((p) => ({ ...p, date: e.target.value }))}
-                      min={new Date().toISOString().split("T")[0]}
-                      className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Time</label>
-                    <input type="time" required value={bookForm.time}
-                      onChange={(e) => setBookForm((p) => ({ ...p, time: e.target.value }))}
-                      className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
-                  </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Date & Time</label>
+                  <input type="datetime-local" required value={bookForm.scheduledAt}
+                    onChange={(e) => setBookForm((p) => ({ ...p, scheduledAt: e.target.value }))}
+                    min={new Date().toISOString().slice(0, 16)}
+                    className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Type</label>
                   <select value={bookForm.type}
                     onChange={(e) => setBookForm((p) => ({ ...p, type: e.target.value }))}
                     className="w-full h-10 rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                    <option value="video">Video Call</option>
-                    <option value="phone">Phone Call</option>
-                    <option value="in-person">In Person</option>
+                    <option value="in_person">In Person</option>
+                    <option value="telemedicine_video">Video Call</option>
+                    <option value="telemedicine_audio">Phone Call</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Notes</label>
-                  <textarea value={bookForm.notes}
-                    onChange={(e) => setBookForm((p) => ({ ...p, notes: e.target.value }))}
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Reason</label>
+                  <textarea required value={bookForm.reason}
+                    onChange={(e) => setBookForm((p) => ({ ...p, reason: e.target.value }))}
                     rows={2} placeholder="Reason for visit..."
                     className="w-full rounded-xl border bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                   />
@@ -180,7 +177,7 @@ export default function DoctorsPage() {
             <Card key={doc._id} hover className="overflow-hidden">
               <CardContent className="p-5">
                 <div className="flex items-start gap-4">
-                  <Avatar name={`${doc.user?.firstName ?? ""} ${doc.user?.lastName ?? ""}`} size="lg" online={doc.isAvailable} />
+                  <Avatar name={`${doc.user?.firstName ?? ""} ${doc.user?.lastName ?? ""}`} size="lg" online={doc.isAvailableForTelemedicine} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-bold text-slate-900 dark:text-white text-sm">
@@ -188,7 +185,7 @@ export default function DoctorsPage() {
                       </h3>
                       {doc.isVerified && <CheckCircle2 className="h-4 w-4 text-blue-500 shrink-0" />}
                     </div>
-                    <p className="text-sm text-emerald-600 font-medium">{doc.specialty}</p>
+                    <p className="text-sm text-emerald-600 font-medium">{doc.specialization}</p>
                     <div className="flex items-center gap-1 mt-1">
                       <MapPin className="h-3 w-3 text-slate-400" />
                       <span className="text-xs text-slate-500 truncate">{doc.hospital}, {doc.location}</span>
@@ -200,7 +197,7 @@ export default function DoctorsPage() {
                         <span className="text-xs text-slate-400">({doc.reviewCount ?? 0})</span>
                       </div>
                       <span className="text-xs text-slate-400">·</span>
-                      <span className="text-xs text-slate-500">{doc.experience} yrs exp</span>
+                      <span className="text-xs text-slate-500">{doc.yearsOfExperience} yrs exp</span>
                     </div>
                     <div className="flex gap-1.5 mt-2 flex-wrap">
                       {(doc.languages ?? []).map((lang) => (
@@ -212,23 +209,23 @@ export default function DoctorsPage() {
                 <div className="mt-4 pt-4 border-t flex items-center justify-between">
                   <div>
                     <p className="text-xs text-slate-500">Consultation fee</p>
-                    <p className="font-bold text-slate-900 dark:text-white">₦{doc.consultFee?.toLocaleString() ?? "—"}</p>
+                    <p className="font-bold text-slate-900 dark:text-white">₦{doc.consultationFee?.toLocaleString() ?? "—"}</p>
                   </div>
-                  <Badge variant={doc.isAvailable ? "default" : "slate"} size="sm">
-                    {doc.isAvailable ? "Available" : "Busy"}
+                  <Badge variant={doc.isAvailableForTelemedicine ? "default" : "slate"} size="sm">
+                    {doc.isAvailableForTelemedicine ? "Available" : "Busy"}
                   </Badge>
                 </div>
                 <div className="flex gap-2 mt-4">
                   <Button variant="outline" size="sm" className="flex-1 gap-1.5"
-                    onClick={() => { setBookingId(doc._id); setBookForm((p) => ({ ...p, type: "video" })); }}>
+                    onClick={() => { setBookingId(doc._id); setBookForm((p) => ({ ...p, type: "telemedicine_video" })); }}>
                     <Video className="h-3.5 w-3.5" /> Video
                   </Button>
                   <Button variant="muted" size="sm" className="flex-1 gap-1.5"
-                    onClick={() => { setBookingId(doc._id); setBookForm((p) => ({ ...p, type: "phone" })); }}>
+                    onClick={() => { setBookingId(doc._id); setBookForm((p) => ({ ...p, type: "telemedicine_audio" })); }}>
                     <Phone className="h-3.5 w-3.5" /> Call
                   </Button>
                   <Button size="sm" className="flex-1 gap-1.5"
-                    onClick={() => { setBookingId(doc._id); setBookForm((p) => ({ ...p, type: "in-person" })); }}>
+                    onClick={() => { setBookingId(doc._id); setBookForm((p) => ({ ...p, type: "in_person" })); }}>
                     <Calendar className="h-3.5 w-3.5" /> Book
                   </Button>
                 </div>

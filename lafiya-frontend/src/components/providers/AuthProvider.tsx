@@ -5,7 +5,7 @@ import { auth as authApi, type User } from "@/lib/api";
 interface AuthState {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<void>;
   register: (body: {
     firstName: string; lastName: string; email: string;
     password: string; phone?: string; role?: string; preferredLanguage?: string;
@@ -34,8 +34,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const res = await authApi.login({ email, password });
+  const login = useCallback(async (identifier: string, password: string) => {
+    const body = identifier.includes("@")
+      ? { email: identifier, password }
+      : { phone: identifier, password };
+
+    const res = await authApi.login(body);
     localStorage.setItem("accessToken", res.token);
     localStorage.setItem("refreshToken", res.refreshToken);
     setUser(res.user);

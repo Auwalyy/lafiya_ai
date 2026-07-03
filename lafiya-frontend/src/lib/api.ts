@@ -80,7 +80,7 @@ export const auth = {
     password: string; phone?: string; role?: string; preferredLanguage?: string;
   }) => request<AuthResponse>("/auth/register", { method: "POST", body: JSON.stringify(body) }),
 
-  login: (body: { email: string; password: string }) =>
+  login: (body: { email?: string; phone?: string; password: string }) =>
     request<AuthResponse>("/auth/login", { method: "POST", body: JSON.stringify(body) }),
 
   me: () => request<{ success: boolean; data: User }>("/auth/me"),

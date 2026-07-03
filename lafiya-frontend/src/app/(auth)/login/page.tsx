@@ -14,17 +14,17 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [form, setForm] = useState({ identifier: "", password: "" });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      await login(form.email, form.password);
+      await login(form.identifier, form.password);
       router.push("/dashboard");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Invalid email or password");
+      setError(err instanceof Error ? err.message : "Invalid email, phone, or password");
     } finally {
       setLoading(false);
     }
@@ -47,12 +47,12 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
-            label="Email address"
-            type="email"
-            placeholder="you@example.com"
+            label="Email address or phone number"
+            type="text"
+            placeholder="you@example.com or +234 800 000 0000"
             icon={<Mail className="h-4 w-4" />}
-            value={form.email}
-            onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+            value={form.identifier}
+            onChange={(e) => setForm((p) => ({ ...p, identifier: e.target.value }))}
             required
           />
           <Input

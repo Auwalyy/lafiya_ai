@@ -6,7 +6,20 @@ const path = require("path");
 
 const app = express();
 
-app.use(cors({ origin: process.env.CLIENT_URL || "*", credentials: true }));
+const ALLOWED_ORIGINS = [
+  process.env.CLIENT_URL,
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://localhost:3002",
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    cb(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+}));
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 

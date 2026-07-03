@@ -27,7 +27,7 @@ async function getAIReply(messages, language = "en") {
       : SYSTEM_PROMPT;
 
   const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
+    model: "gemini-1.5-flash-8b",
     systemInstruction,
   });
 
@@ -77,7 +77,11 @@ router.post("/chat", protect, async (req, res) => {
 
     res.json({ success: true, sessionId: session._id, reply, urgencyLevel });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error("AI chat error:", err.message);
+    const msg = err.message?.includes("API_KEY_INVALID") || err.message?.includes("API key")
+      ? "Invalid Gemini API key. Please update GEMINI_API_KEY in your .env file."
+      : err.message || "AI service error";
+    res.status(500).json({ success: false, message: msg });
   }
 });
 
@@ -93,7 +97,7 @@ Respond ONLY with valid JSON in this exact format: { "analysis": "", "possibleCo
     let data;
     if (genAI) {
       const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash",
+        model: "gemini-1.5-flash-8b",
         systemInstruction: SYSTEM_PROMPT,
       });
       const result = await model.generateContent(prompt);
